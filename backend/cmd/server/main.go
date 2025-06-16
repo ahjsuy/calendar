@@ -2,8 +2,11 @@ package main
 
 import (
 	"calendar_project/backend/cmd/server/handlers"
+	"calendar_project/backend/cmd/server/middleware"
+
+	"github.com/gin-gonic/gin"
+
 	"log"
-	"net/http"
 
 	"github.com/joho/godotenv"
 )
@@ -14,30 +17,46 @@ func main() {
         log.Fatal("Error loading .env file")
     }
 
-    http.HandleFunc("/auth/register", handlers.RegisterHandler)
-    http.HandleFunc("/auth/login", handlers.LoginHandler)
+    router := gin.Default()
 
-    log.Println("Server running on http://localhost:8080")
-    http.ListenAndServe(":8080", nil)
+    auth := router.Group("/auth")
+    {
+        auth.POST("/register", handlers.RegisterHandler)
+        auth.POST("/login", handlers.LoginHandler)
+    }
+
+    api := router.Group("/api")
+    api.Use(middleware.AuthMiddleware)
+
+    groups := api.Group("/groups")
+    {
+        groups.GET("/", handlers.GetGroupsUserIsOwner)
+        groups.POST("/", handlers.CreateGroupsHandler)
+        groups.DELETE("/:groupID", handlers.DeleteGroupHandler)
+        groups.POST("/:groupID/members", handlers.AddGroupMembersHandlers)
+        groups.DELETE("/:groupID/members", handlers.DeleteGroupMembersHandlers)
+    }
+
+    calendars := api.Group("/calendars")
+    {
+        calendars.GET("/", handlers.GetCalendarHandler)
+        calendars.POST("/", handlers.CreateCalendarHandler)
+        calendars.PUT("/:id", handlers.EditCalendarHandler)
+        calendars.DELETE("/:id", handlers.DeleteCalendarHandler)
+    }
+
+    calendarEvents := calendars.Group("/:id")
+    {
+        calendarEvents.GET("/", handlers.GetEventsHandler)
+        calendarEvents.POST("/", handlers.CreateEventsHandlers)
+    }
+     
+    router.Run("localhost:8081")
 }
 
-
-
-// func queryData(conn *pgx.Conn) {
-//     rows, err := conn.Query(context.Background(), "SELECT id, username FROM users")
-
-//     if err != nil {
-//         log.Fatal(err)
-//     }
-//     defer rows.Close()
-
-//     for rows.Next() {
-//         var id string
-//         var name string
-//         err := rows.Scan(&id, &name)
-//         if err != nil {
-//             log.Fatal(err)
-//         }
-//         fmt.Printf("User ID: %s, Name: %s\n", id, name)
-//     }
-// }
+// to do list: add groups to calendars
+// remove groups from calendars, change group perms
+// get all groups user owns, get all groups a calendar owns
+// get all calendars user is group of, allow event edits based on perms
+// edit events, delete events
+// do frontend
