@@ -64,7 +64,7 @@ func CreateEventsHandlers(c *gin.Context){
 			return
 		}
 	
-	c.JSON(http.StatusCreated, gin.H{"message": "calendar created!"})
+	c.JSON(http.StatusCreated, gin.H{"message": "event created!"})
 }
 
 func GetEventsHandler(c *gin.Context) {
@@ -107,19 +107,55 @@ func GetEventsHandler(c *gin.Context) {
 
 }
 
-// func EditEventsHandler(c *gin.Context){
-// 	calendarID, err := utils.GetCalendar(c)
-// 	if err != nil {
-// 		return
-// 	}
+func EditEventHandler(c *gin.Context){
+	var payload struct {
+		Name 		string	`json:"name"`
+		StartDate 	string	`json:"startDate"`
+		EndDate 	string	`json:"endDate"`
+		Visibility 	string	`json:"visibility"`
+	}
+	
+	calendarID, err := utils.GetCalendar(c)
+	if err != nil {
+		return
+	}
 
-// 	conn, err := utils.GetDB(c)
-// 	if err != nil {
-// 		return
-// 	}
+	conn, err := utils.GetDB(c)
+	if err != nil {
+		return
+	}
+	defer conn.Close(c.Request.Context())
 
-// 	defer conn.Close(c.Request.Context())
+	_, err = conn.Exec(c.Request.Context(),
+		"UPDATE events SET name=$1, start_date=$2, end_date=$3, visibility=$4 WHERE calendar_id=$5",
+		payload.Name, payload.StartDate, payload.EndDate, payload.Visibility, calendarID)	
 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":"database could not update event"})
+		return
+	}
 
+	c.JSON(http.StatusOK, gin.H{"message":"Event Updated"})
 
-// }
+}
+
+func DeleteEventHandler(c *gin.Context) {
+	eventID, err := utils.GetEvent(c)
+	if err != nil {
+		return
+	}
+	conn, err := utils.GetDB(c)
+	if err != nil {
+		return
+	}
+	defer conn.Close(c.Request.Context())
+
+	result, _ := conn.Exec(c.Request.Context(), 
+	"DELETE FROM events WHERE events.id=$1", eventID)
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error":"Event not found or owned by user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message":"Event deleted"})
+}

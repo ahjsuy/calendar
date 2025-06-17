@@ -24,7 +24,7 @@ func GetUser(c *gin.Context) (string, error) {
 }
 
 func GetCalendar(c *gin.Context) (string, error) {
-	calendarIDStr := c.Param("id")
+	calendarIDStr := c.Param("calendarID")
 	calendarID, err := uuid.Parse(calendarIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error":"calendar ID missing in url"})
@@ -47,6 +47,17 @@ func GetGroup(c *gin.Context) (string, error) {
 
 }
 
+func GetEvent(c *gin.Context) (string, error) {
+	eventIDStr := c.Param("eventID")
+	eventID, err := uuid.Parse(eventIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error":"event ID missing in url"})
+		return "0", fmt.Errorf(("eventID missing"))
+	}
+
+	return eventID.String(), nil
+
+}
 func GetDB(c *gin.Context) (*pgx.Conn, error){
 	conn, err := db.Connect()
 	if err != nil {

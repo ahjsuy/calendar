@@ -30,33 +30,51 @@ func main() {
 
     groups := api.Group("/groups")
     {
-        groups.GET("/", handlers.GetGroupsUserIsOwner)
+        groups.GET("/", handlers.GetGroupsUserIsOwnerHandler)
         groups.POST("/", handlers.CreateGroupsHandler)
-        groups.DELETE("/:groupID", handlers.DeleteGroupHandler)
-        groups.POST("/:groupID/members", handlers.AddGroupMembersHandlers)
-        groups.DELETE("/:groupID/members", handlers.DeleteGroupMembersHandlers)
+
+        groups.GET("/:groupID", handlers.GetGroupHandler)
+        groups.PUT("/:groupID", middleware.GroupOwnershipMiddleWare, handlers.EditGroupsHandler)
+        groups.DELETE("/:groupID", middleware.GroupOwnershipMiddleWare, handlers.DeleteGroupHandler)
+
+        groups.GET("/:groupID/members", handlers.GetGroupMembersHandler)
+        groups.POST("/:groupID/members", middleware.GroupOwnershipMiddleWare, handlers.AddGroupMembersHandlers)
+        groups.DELETE("/:groupID/members", middleware.GroupOwnershipMiddleWare, handlers.DeleteGroupMembersHandlers)
     }
 
     calendars := api.Group("/calendars")
     {
-        calendars.GET("/", handlers.GetCalendarHandler)
+
+        calendars.GET("/owned", handlers.GetOwnedCalendarsHandler)
+        calendars.GET("/", handlers.GetCalendarsUserCanRead)
         calendars.POST("/", handlers.CreateCalendarHandler)
-        calendars.PUT("/:id", handlers.EditCalendarHandler)
-        calendars.DELETE("/:id", handlers.DeleteCalendarHandler)
+
+        calendars.PUT("/:calendarID", handlers.EditCalendarHandler)
+        calendars.DELETE("/:calendarID", handlers.DeleteCalendarHandler)
+
+        calendars.GET("/:calendarID/groups", handlers.GetGroupsForCalendar)
+        calendars.POST("/:calendarID/groups", handlers.AddGroupsToCalendar)
+        calendars.PUT("/:calendarID/groups", handlers.EditGroupToCalendar)
+        calendars.DELETE("/:calendarID/groups", handlers.DeleteGroupsToCalendar)
     }
 
-    calendarEvents := calendars.Group("/:id")
+    calendarEvents := calendars.Group("/:calendarID")
     {
         calendarEvents.GET("/", handlers.GetEventsHandler)
         calendarEvents.POST("/", handlers.CreateEventsHandlers)
+        calendarEvents.PUT("/:eventID", middleware.EventWritePermissionMiddleWare, handlers.EditEventHandler)
+        calendarEvents.DELETE("/:eventID", middleware.EventWritePermissionMiddleWare, handlers.DeleteEventHandler)
+    }
+
+    users := api.Group("/users")
+    {
+        users.GET("/:username", handlers.GetUserHandler)
     }
      
     router.Run("localhost:8081")
 }
 
-// to do list: add groups to calendars
-// remove groups from calendars, change group perms
-// get all groups user owns, get all groups a calendar owns
-// get all calendars user is group of, allow event edits based on perms
-// edit events, delete events
+// to do list: 
+//  delete events
+// 
 // do frontend

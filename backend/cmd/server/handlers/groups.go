@@ -17,6 +17,11 @@ type Group struct {
 	Color		 	string `json:"color"`
 }
 
+type GroupMember struct {
+	ID string `json:"id"`
+	Username string `json:"username"`
+}
+
 func CreateGroupsHandler(c *gin.Context){
 	var payload struct {
 		OwnerID string 
@@ -42,18 +47,47 @@ func CreateGroupsHandler(c *gin.Context){
 	}
 	defer conn.Close(c.Request.Context())
 
-	if err := utils.CreateRowDB(conn, c, 
-		"groups", 
-		"owner_id, name, color", 
-		fmt.Sprintf("'%s', '%s', '%s'", payload.OwnerID, payload.Name, payload.Color)); err != nil{
-			return
-		}
+	_, err = conn.Exec(c.Request.Context(),
+		"INSERT INTO groups (owner_id, name, color)  VALUES ($1,$2,$3)",
+		payload.OwnerID, payload.Name, payload.Color)	
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":"database cannot insert group"})
+		return
+	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "group created!"})
 
 }
 
-func GetGroupsUserIsOwner(c *gin.Context){
+func GetGroupHandler(c *gin.Context){
+
+	groupID, err := utils.GetGroup(c)
+	if err != nil {
+		return
+	}
+
+	conn, err := utils.GetDB(c)
+	if err != nil {
+		return
+	}
+	defer conn.Close(c.Request.Context())
+
+	var groupObj Group
+	err = conn.QueryRow(c.Request.Context(), 
+			"SELECT id, owner_id, name, color FROM groups WHERE groups.id=$1", groupID).Scan(&groupObj.ID, &groupObj.OwnerID, &groupObj.Name, &groupObj.Color)
+	
+	if err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error":"server could not retrieve groups"})
+			return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"group": groupObj })
+
+}
+
+func GetGroupsUserIsOwnerHandler(c *gin.Context){
 	userID, exists := utils.GetUser(c)
 	if exists != nil {
 		return
@@ -137,6 +171,12 @@ func AddGroupMembersHandlers (c *gin.Context){
 		return
 	}
 
+	conn, err := utils.GetDB(c)
+	if err != nil {
+		return
+	}
+	defer conn.Close(c.Request.Context())
+
 	memberIDs := strings.Split(payload.Members, ",")
 	if len(memberIDs) == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no members provided"})
@@ -155,12 +195,6 @@ func AddGroupMembersHandlers (c *gin.Context){
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no valid member IDs provided"})
 		return
 	}
-
-	conn, err := utils.GetDB(c)
-	if err != nil {
-		return
-	}
-	defer conn.Close(c.Request.Context())
 
 	query := fmt.Sprintf(
 		"INSERT INTO group_members (member_id, group_id) VALUES %s",
@@ -223,10 +257,74 @@ func DeleteGroupMembersHandlers (c *gin.Context){
 	)
 
 	if _, err := conn.Exec(c.Request.Context(), query); err != nil {
-		log.Panicln(query)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete members"})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "members deleted!"})
+}
+
+func EditGroupsHandler(c *gin.Context){
+
+	var payload struct {
+		Name string `json:"name"`
+		Color string `json:"color"`
+	}
+
+	if err := c.Bind(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error":"invalid request"})
+		return
+	}
+
+	userID, err := utils.GetUser(c)
+	if err != nil {
+		return
+	}
+	groupID, err := utils.GetGroup(c)
+	if err != nil {
+		return
+	}
+	conn, err := utils.GetDB(c)
+	if err != nil {
+		return
+	}
+	defer conn.Close(c.Request.Context())
+
+	_, err = conn.Exec(c.Request.Context(), 
+		"UPDATE groups SET name=$1, color=$2 WHERE id=$3 AND owner_id=$4",
+		payload.Name, payload.Color, groupID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":"database could not execute query"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message":"group successfully updated!"})
+}
+
+func GetGroupMembersHandler (c *gin.Context){
+	groupID, err := utils.GetGroup(c)
+	if err != nil {
+		return
+	}
+
+	conn, err := utils.GetDB(c)
+	if err != nil {
+		return
+	}
+	defer conn.Close(c.Request.Context())
+
+	rows, err := conn.Query(c.Request.Context(),
+		"SELECT u.id, u.username FROM group_members gm JOIN users u ON gm.member_id = u.id WHERE gm.group_id=$1",
+		groupID)	
+
+	var members []GroupMember
+	for rows.Next() {
+		var m GroupMember
+		if err := rows.Scan(&m.ID, &m.Username); err != nil {
+			log.Println(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error scanning calendar group"})
+			return
+		}
+		members = append(members, m)
+	}
+	c.JSON(http.StatusOK, gin.H{"members": members })
 }
