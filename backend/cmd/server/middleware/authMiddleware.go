@@ -12,13 +12,13 @@ import (
 )
 
 func AuthMiddleware(c *gin.Context){
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer "){
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token invalid"})
+	token, err := c.Cookie("token")
+	if err != nil {
+		log.Println(err);
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 	
-	token := strings.TrimPrefix(authHeader, "Bearer ")
 	userID, err := utils.VerifyToken(token)
 	if err != nil {
 		log.Printf(" verify token error: %s", err)

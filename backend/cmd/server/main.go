@@ -4,9 +4,11 @@ import (
 	"calendar_project/backend/cmd/server/handlers"
 	"calendar_project/backend/cmd/server/middleware"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"log"
+	"net/http"
 
 	"github.com/joho/godotenv"
 )
@@ -18,6 +20,15 @@ func main() {
     }
 
     router := gin.Default()
+
+    c := cors.New(cors.Config{
+        AllowOrigins:     []string{"https://localhost:5173"},
+        AllowMethods:     []string{"GET", "POST", "DELETE", "PUT", "OPTIONS"},
+        AllowHeaders:     []string{"Content-Type", "Authorization"},
+        AllowCredentials: true,
+    })
+
+    router.Use(c)
 
     auth := router.Group("/auth")
     {
@@ -70,11 +81,14 @@ func main() {
     {
         users.GET("/:username", handlers.GetUserHandler)
     }
-     
-    router.Run("localhost:8081")
+
+    router.OPTIONS("/*path", func(c *gin.Context) {
+        c.Status(http.StatusOK)
+    })
+
+    log.Fatal(router.RunTLS(":8081", "../../../localhost.pem", "../../../localhost-key.pem"))
+
 }
 
 // to do list: 
-//  delete events
-// 
-// do frontend
+// someone with read only perms can edit

@@ -33,6 +33,7 @@ type CalendarGroup struct {
 func CreateCalendarHandler(c *gin.Context){
 
 	var payload struct {
+		UserID      *string `json:"user_id"`
 		Name string `json:"name"`
 		Description string `json:"description"`
 	}
@@ -42,13 +43,21 @@ func CreateCalendarHandler(c *gin.Context){
 		return
 	}
 
-	userID, exists := utils.GetUser(c)
-	if exists != nil {
-		return
+	var userID string
+	if payload.UserID != nil && *payload.UserID != "" {
+		userID = *payload.UserID
+	} else {
+		uid, exists := utils.GetUser(c)
+		if exists != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user does not exist"})
+			return
+		}
+		userID = uid
 	}
 
 	conn, err := utils.GetDB(c)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":"database service down"})
 		return
 	}
 	defer conn.Close(c.Request.Context())
@@ -90,14 +99,14 @@ func GetOwnedCalendarsHandler(c* gin.Context) {
 
 	for rows.Next() {
 		var cal Calendar
-		if err := rows.Scan(&cal.ID,  &cal.Name, &cal.Description); err != nil {
+		if err := rows.Scan(&cal.ID, &cal.Name, &cal.Description); err != nil {
 			log.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error scanning calendar"})
 			return
 		}
 		calendars = append(calendars, cal)
 	}
-
+	log.Print(len(calendars))
 	c.JSON(http.StatusOK, gin.H{"calendars": calendars })
 }
 
@@ -207,7 +216,7 @@ func DeleteCalendarHandler(c *gin.Context){
 	}
 	defer conn.Close(c.Request.Context())
 
-	result, err := conn.Exec(c.Request.Context(), 
+	result, _ := conn.Exec(c.Request.Context(), 
 	"DELETE FROM calendars WHERE calendars.id=$1 AND owner_id=$2", calendarID, userID)
 	if result.RowsAffected() == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error":"Calendar not found or owned by user"})

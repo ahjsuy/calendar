@@ -8,6 +8,8 @@ import (
 	"calendar_project/backend/cmd/server/db"
 	"calendar_project/backend/cmd/server/utils"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -32,11 +34,22 @@ func RegisterHandler(c *gin.Context){
 	"INSERT INTO users (username, password_hash, email) values($1, $2, $3)", user.Username, password_hash, user.Email)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "server could not create user"})
+		if pgErr, ok := err.(*pgconn.PgError); ok {
+			// Check for the unique violation error code
+			if pgErr.Code == "23505" {
+				c.JSON(http.StatusConflict, gin.H{"error": "duplicate user"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "server could not create user"})
+			}
+		}
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, gin.H{"message":"user created"})
+	var id string
+	err = conn.QueryRow(context.Background(),
+		"SELECT id FROM users WHERE email=$1", user.Email).Scan(&id)
+
+	c.IndentedJSON(http.StatusOK, gin.H{"user_id":id})
 	
 }
 func LoginHandler(c *gin.Context) {
@@ -67,7 +80,9 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	token, _ := utils.CreateToken(id)
-	c.IndentedJSON(http.StatusOK, gin.H{"token":token})
+	// remember to set https to true in prod
+	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetCookie("token", token, 3600, "/", "localhost", true, true)
 }
 
 

@@ -18,6 +18,7 @@ type Event struct {
 	EndDate 		time.Time	`json:"endDate"`
 	Visibility 		string		`json:"visibility"`
 	CreatedAt		time.Time 	`json:"createdAt"`
+	Description		string		`json:"description"`
 }
 
 func CreateEventsHandlers(c *gin.Context){
@@ -37,6 +38,7 @@ func CreateEventsHandlers(c *gin.Context){
 		StartDate 		string	`json:"startDate"`
 		EndDate 		string	`json:"endDate"`
 		Visibility 		string	`json:"visibility"`
+		Description		string	`json:"description"`
 	}
 
 	if err := c.Bind(&event); err != nil {
@@ -59,8 +61,8 @@ func CreateEventsHandlers(c *gin.Context){
 	
 	if err := utils.CreateRowDB(conn, c, 
 		"events", 
-		"calendar_id, name, start_date, end_date, visibility", 
-		fmt.Sprintf("'%s', '%s', '%s', '%s', '%s'", event.CalendarID, event.Name, event.StartDate, event.EndDate, event.Visibility)); err != nil{
+		"calendar_id, name, start_date, end_date, visibility, description", 
+		fmt.Sprintf("'%s', '%s', '%s', '%s', '%s', '%s", event.CalendarID, event.Name, event.StartDate, event.EndDate, event.Visibility, event.Description)); err != nil{
 			return
 		}
 	
@@ -95,7 +97,7 @@ func GetEventsHandler(c *gin.Context) {
 
 	for rows.Next(){
 		var e Event
-		if err := rows.Scan(&e.ID, &e.CalendarID, &e.Name, &e.StartDate, &e.EndDate, &e.Visibility, &e.CreatedAt); err != nil{
+		if err := rows.Scan(&e.ID, &e.CalendarID, &e.Name, &e.StartDate, &e.EndDate, &e.Visibility, &e.CreatedAt, &e.Description); err != nil{
 			log.Println(err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error":"error scanning events"})
 			return
@@ -113,6 +115,7 @@ func EditEventHandler(c *gin.Context){
 		StartDate 	string	`json:"startDate"`
 		EndDate 	string	`json:"endDate"`
 		Visibility 	string	`json:"visibility"`
+		Description	string	`json:"description"`
 	}
 	
 	calendarID, err := utils.GetCalendar(c)
