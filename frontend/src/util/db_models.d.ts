@@ -9,7 +9,7 @@ export type CalendarType = {
 
 export type EventType = {
   id: string;
-  calendarID: string;
+  calendar_id: string;
   name: string;
   startDate: string;
   endDate: string;
@@ -24,4 +24,12 @@ export type GroupType = {
   name: string;
   color: string;
   createdAt: string;
+};
+
+export type Calendar_GroupType = {
+  calendar_id: string;
+  group_id: string;
+  permission: string;
+  granted_at: string;
+  visibility: string;
 };

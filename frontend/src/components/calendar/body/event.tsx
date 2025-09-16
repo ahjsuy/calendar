@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { CalendarType, EventType } from "../../../util/db_models";
+import useClickOutside from "../../../hooks/useClickOutside";
 
 interface Props {
   event: EventType;
@@ -8,12 +9,15 @@ interface Props {
 
 const Event = ({ event }: Props) => {
   const [expanded, setExpanded] = useState<Boolean>(false);
-
+  const ref = useClickOutside(() => {
+    setExpanded(false);
+  });
   return (
     <div
       className={`transition-all duration-300 ease-in-out  ${
         expanded ? `event-button-expanded` : `event-button`
       }`}
+      ref={ref}
     >
       <div>
         <div

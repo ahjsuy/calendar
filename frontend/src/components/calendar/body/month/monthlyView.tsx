@@ -111,7 +111,7 @@ const MonthlyView = ({ currentDate, events }: Props) => {
 
   useEffect(() => {
     fillCalendarArray();
-  }, [currentDate]);
+  }, [currentDate, events]);
 
   return (
     <div>
