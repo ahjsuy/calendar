@@ -117,7 +117,7 @@ button:focus-visible {
 }
 
 .event-button-expanded {
-  background-color: var(--color-secondary-300);
+  background-color: gray;
   min-width: 50vw;
   min-height: 50vh;
   position: fixed;
@@ -130,4 +130,20 @@ button:focus-visible {
 
   font-size: 1.75rem;
   justify-content: start;
+}
+
+.focus-module-input {
+  background-color: gray;
+  color: black;
+  padding: 0.25rem 0.5rem;
+  margin: 0.25rem;
+  border-radius: 1rem;
+}
+
+.medium {
+  font-size: 0.75rem;
+}
+
+.small {
+  font-size: 0.5rem;
 }

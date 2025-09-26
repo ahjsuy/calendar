@@ -40,11 +40,15 @@ const Event = ({ event }: Props) => {
             {event.name}
           </div>
 
-          <div className={`text-left ${!expanded ? `pr-2 pt-1` : `pr-2 pt-5`}`}>
+          <div
+            className={`flex flex-row text-left ${
+              !expanded ? `pr-2 pt-1` : `pr-2 pt-5`
+            }`}
+          >
             {new Date(event.startDate).getHours()}:
-            {new Date(event.startDate).getMinutes()}
+            {new Date(event.startDate).getMinutes()} —
             {expanded && event.endDate && (
-              <div>
+              <div className="">
                 {new Date(event.endDate).getHours()}:
                 {new Date(event.endDate).getMinutes()}
               </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { EventType } from "../../util/db_models";
-import { API_BASE } from "../../util/api";
+import useClickOutside from "../../hooks/useClickOutside";
+import FocusModule from "../focusModule";
 
 interface Props {
   events: EventType[];
@@ -26,6 +27,11 @@ const UpcomingEvents = ({
     setUpcomingEvents(temp);
   }, [events]);
 
+  const ref = useClickOutside(() => setShowEventForm(false));
+  const currentDay = currentDate.getDate();
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
   return (
     <div className="p-2 w-[20vw]">
       <h2 className="text-2xl m-1">Upcoming Events</h2>
@@ -50,13 +56,38 @@ const UpcomingEvents = ({
         + Add another event to this calendar?
       </div>
       {showEventForm && (
-        <div
-          className={`transition-all duration-300 ease-in-out  ${
-            showEventForm ? `event-button-expanded` : `event-button`
-          }`}
-        >
-          <form>Create a new event</form>
-        </div>
+        <FocusModule
+          children={
+            <div>
+              <div className="flex flex-row justify-between">
+                <input
+                  className="focus-module-input"
+                  placeholder="Event Name"
+                />
+                <div className="align-middle">
+                  <input
+                    className="focus-module-input medium"
+                    value="2017-06-01"
+                    type="date"
+                  />
+                  <div className="flex align-middle">
+                    <input className="focus-module-input small" type="time" />
+                    -
+                    <input className="focus-module-input small" type="time" />
+                  </div>
+                </div>
+              </div>
+              <hr />
+              <div> Description</div>
+
+              <div> Groups</div>
+              <div> Calendars </div>
+            </div>
+          }
+          expanded={showEventForm}
+          setExpanded={setShowEventForm}
+          ref={ref}
+        />
       )}
     </div>
   );
